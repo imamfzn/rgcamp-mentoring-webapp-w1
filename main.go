@@ -7,6 +7,12 @@ import (
 	"text/template"
 )
 
+type GramediaBook struct {
+	Name  string  `json:"name"`
+	Image string  `json:"thumbnail"`
+	Price float64 `json:"basePrice"`
+}
+
 type Book struct {
 	Name  string  `json:"name"`
 	Image string  `json:"image"`
@@ -19,13 +25,31 @@ type Data struct {
 
 var GramediaAPIBaseUrl = "https://www.gramedia.com/api/algolia/search/product?q=belajar"
 
+func GetGramediaBooks() []Book {
+	resp, _ := http.Get(GramediaAPIBaseUrl)
+
+	var gbooks []GramediaBook
+	err := json.NewDecoder(resp.Body).Decode(&gbooks)
+	if err != nil {
+		panic(err)
+	}
+
+	var books []Book
+	for _, b := range gbooks {
+		book := Book{b.Name, b.Image, b.Price}
+		books = append(books, book)
+	}
+
+	return books
+}
+
 func main() {
 	tmpl, err := template.ParseFiles("./books.html")
 	if err != nil {
 		panic(err)
 	}
 
-	books := []Book{}
+	books := GetGramediaBooks()
 
 	http.HandleFunc("/api/books", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
