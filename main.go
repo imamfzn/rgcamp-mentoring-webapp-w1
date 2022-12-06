@@ -23,10 +23,17 @@ type Data struct {
 	Books []Book
 }
 
-var GramediaAPIBaseUrl = "https://www.gramedia.com/api/algolia/search/product?q=belajar"
+var GramediaAPIBaseUrl = "https://www.gramedia.com/api/algolia/search/product"
 
-func GetGramediaBooks() []Book {
-	resp, _ := http.Get(GramediaAPIBaseUrl)
+// name: soekarno
+func GetGramediaBooks(name string) []Book {
+	url := GramediaAPIBaseUrl
+	if name != "" {
+		url = url + "?q=" + name
+	}
+
+	// ambil data buku ke gramedia
+	resp, _ := http.Get(url)
 
 	var gbooks []GramediaBook
 	err := json.NewDecoder(resp.Body).Decode(&gbooks)
@@ -49,10 +56,11 @@ func main() {
 		panic(err)
 	}
 
-	books := GetGramediaBooks()
-
 	http.HandleFunc("/api/books", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
+		name := r.URL.Query().Get("name")
+		books := GetGramediaBooks(name)
+
 		err := json.NewEncoder(w).Encode(books)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -61,6 +69,9 @@ func main() {
 	})
 
 	http.HandleFunc("/page/books", func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Query().Get("name")
+		books := GetGramediaBooks(name)
+
 		data := Data{Books: books}
 		err = tmpl.Execute(w, data)
 		if err != nil {
